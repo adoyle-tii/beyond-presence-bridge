@@ -18,7 +18,7 @@ console.log(`  - BEYOND_PRESENCE_API_KEY: ${process.env.BEYOND_PRESENCE_API_KEY 
 console.log(`  - BEYOND_PRESENCE_AVATAR_ID: ${process.env.BEYOND_PRESENCE_AVATAR_ID ? '✓' : '✗'}`);
 
 // Define the agent using LiveKit SDK pattern
-export default defineAgent({
+const agent = defineAgent({
     entry: async (ctx) => {
         console.log(`[Bridge] 🎬 Agent joining room: ${ctx.room.name}`);
         
@@ -53,4 +53,9 @@ export default defineAgent({
     },
 });
 
-console.log('[Bridge] 🚀 Agent defined and ready');
+console.log('[Bridge] 🚀 Agent defined, starting worker...');
+
+// Start the worker to listen for room assignments
+cli.runApp(new WorkerOptions({ agent }));
+
+console.log('[Bridge] 🎧 Worker running and listening for rooms');
