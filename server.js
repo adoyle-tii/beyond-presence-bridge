@@ -174,6 +174,13 @@ async function monitorAvatarSession(roomName, sessionId, apiKey) {
 
 // Generate LiveKit token for avatar
 function generateAvatarToken(roomName, identity, apiKey, apiSecret) {
+    console.log(`[Bridge] Generating token for identity: ${identity}`);
+    console.log(`[Bridge] API Key present: ${!!apiKey}, API Secret present: ${!!apiSecret}`);
+    
+    if (!apiKey || !apiSecret) {
+        throw new Error('Missing LIVEKIT_API_KEY or LIVEKIT_API_SECRET');
+    }
+    
     const token = new AccessToken(apiKey, apiSecret, {
         identity: identity,
         ttl: '2h'
@@ -188,7 +195,10 @@ function generateAvatarToken(roomName, identity, apiKey, apiSecret) {
         hidden: false
     });
     
-    return token.toJwt();
+    const jwt = token.toJwt();
+    console.log(`[Bridge] Generated JWT token (length: ${jwt.length})`);
+    
+    return jwt;
 }
 
 // Start HTTP server
