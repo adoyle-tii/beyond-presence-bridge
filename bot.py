@@ -8,7 +8,7 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
-from pipecat_bey import BeyondPresenceService
+from pipecat_bey import BeyService
 from pipecat.transports.services.livekit import LiveKitTransport, LiveKitParams
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 
@@ -53,7 +53,7 @@ async def main():
     )
     
     # Beyond Presence avatar service
-    avatar = BeyondPresenceService(
+    avatar = BeyService(
         api_key=os.getenv("BEYOND_PRESENCE_API_KEY"),
         avatar_id=os.getenv("BEYOND_PRESENCE_AVATAR_ID"),
     )
