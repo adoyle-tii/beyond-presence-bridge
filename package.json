@@ -5,8 +5,8 @@
   "type": "module",
   "main": "agent.js",
   "scripts": {
-    "start": "node --no-warnings agent.js",
-    "dev": "node --watch agent.js"
+    "start": "livekit-agents start agent.js",
+    "dev": "livekit-agents dev agent.js"
   },
   "dependencies": {
     "@livekit/agents": "latest",
