@@ -1,18 +1,19 @@
 {
   "name": "beyond-presence-bridge",
   "version": "1.0.0",
-  "description": "LiveKit agent bridge for Beyond Presence avatar integration",
+  "description": "LiveKit agent bridge for Beyond Presence avatar integration using official plugin",
   "type": "module",
-  "main": "server.js",
+  "main": "agent.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node agent.js",
+    "dev": "node --watch agent.js"
   },
   "dependencies": {
+    "@livekit/agents": "^0.8.0",
+    "@livekit/agents-plugin-bey": "latest",
+    "livekit-client": "^2.5.0",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2",
-    "dotenv": "^16.4.5",
-    "ws": "^8.18.0"
+    "dotenv": "^16.4.5"
   },
   "engines": {
     "node": ">=18.0.0"
