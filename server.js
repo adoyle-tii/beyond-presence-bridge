@@ -53,7 +53,7 @@ app.post('/start-avatar', async (req, res) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${BEYOND_PRESENCE_API_KEY}`,
+                'x-api-key': BEYOND_PRESENCE_API_KEY,
             },
             body: JSON.stringify({
                 avatar_id: avatarId || BEYOND_PRESENCE_AVATAR_ID,
