@@ -5,13 +5,12 @@
   "type": "module",
   "main": "agent.js",
   "scripts": {
-    "start": "node agent.js",
+    "start": "node --no-warnings agent.js",
     "dev": "node --watch agent.js"
   },
   "dependencies": {
     "@livekit/agents": "^1.0.44",
     "@livekit/agents-plugin-bey": "^1.0.44",
-    "livekit-client": "^2.5.0",
     "express": "^4.21.2",
     "dotenv": "^16.4.5"
   },
