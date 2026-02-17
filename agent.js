@@ -1,5 +1,5 @@
 // Beyond Presence Bridge using LiveKit Agents SDK
-import { WorkerOptions, cli, defineAgent, JobContext } from '@livekit/agents';
+import { WorkerOptions, cli, defineAgent } from '@livekit/agents';
 import * as bey from '@livekit/agents-plugin-bey';
 import 'dotenv/config';
 
@@ -18,7 +18,7 @@ console.log(`  - BEYOND_PRESENCE_API_KEY: ${process.env.BEYOND_PRESENCE_API_KEY 
 console.log(`  - BEYOND_PRESENCE_AVATAR_ID: ${process.env.BEYOND_PRESENCE_AVATAR_ID ? '✓' : '✗'}`);
 
 // Define the agent entry point
-async function entrypoint(ctx: JobContext) {
+async function entrypoint(ctx) {
     console.log(`[Bridge] 🎬 Agent joining room: ${ctx.room.name}`);
     
     await ctx.connect();
