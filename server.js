@@ -47,7 +47,7 @@ app.post('/start-avatar', async (req, res) => {
             canPublishData: true,
             hidden: false,
         });
-        const token = at.toJwt();
+        const token = await at.toJwt();
         
         console.log('[Bridge] Generated token for avatar');
         console.log('[Bridge] LIVEKIT_URL:', LIVEKIT_URL);
