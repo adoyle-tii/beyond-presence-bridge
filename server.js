@@ -32,6 +32,7 @@ app.post('/start-avatar', async (req, res) => {
     console.log('[Bridge] 🎬 Starting avatar for room:', roomName);
     console.log('[Bridge] Session ID:', sessionId);
     console.log('[Bridge] Coach audio participant:', coachAudioParticipant);
+    console.log('[Bridge] Avatar ID:', avatarId || BEYOND_PRESENCE_AVATAR_ID);
     
     try {
         // Generate token for the avatar
@@ -48,6 +49,25 @@ app.post('/start-avatar', async (req, res) => {
         });
         const token = at.toJwt();
         
+        console.log('[Bridge] Generated token for avatar');
+        console.log('[Bridge] LIVEKIT_URL:', LIVEKIT_URL);
+        console.log('[Bridge] Room:', roomName);
+        
+        const payload = {
+            avatar_id: avatarId || BEYOND_PRESENCE_AVATAR_ID,
+            livekit_room: roomName,
+            url: LIVEKIT_URL,
+            token: token,
+        };
+        
+        console.log('[Bridge] Payload keys:', Object.keys(payload));
+        console.log('[Bridge] Payload values check:', {
+            avatar_id: typeof payload.avatar_id,
+            livekit_room: typeof payload.livekit_room,
+            url: typeof payload.url,
+            token: typeof payload.token,
+        });
+        
         // Call Beyond Presence API to start the avatar session
         const beyondResponse = await fetch('https://api.bey.dev/v1/sessions', {
             method: 'POST',
@@ -55,12 +75,7 @@ app.post('/start-avatar', async (req, res) => {
                 'Content-Type': 'application/json',
                 'x-api-key': BEYOND_PRESENCE_API_KEY,
             },
-            body: JSON.stringify({
-                avatar_id: avatarId || BEYOND_PRESENCE_AVATAR_ID,
-                livekit_room: roomName,
-                url: LIVEKIT_URL,
-                token: token,
-            }),
+            body: JSON.stringify(payload),
         });
         
         const beyondData = await beyondResponse.json();
