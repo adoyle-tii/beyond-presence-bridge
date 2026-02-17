@@ -2,6 +2,7 @@
 import { WorkerOptions, cli, defineAgent } from '@livekit/agents';
 import * as bey from '@livekit/agents-plugin-bey';
 import 'dotenv/config';
+import { fileURLToPath } from 'node:url';
 
 // Set LIVEKIT_URL from LIVEKIT_WS_URL if needed (for SDK compatibility)
 if (process.env.LIVEKIT_WS_URL && !process.env.LIVEKIT_URL) {
@@ -17,8 +18,8 @@ console.log(`  - LIVEKIT_API_SECRET: ${process.env.LIVEKIT_API_SECRET ? '✓' : 
 console.log(`  - BEYOND_PRESENCE_API_KEY: ${process.env.BEYOND_PRESENCE_API_KEY ? '✓' : '✗'}`);
 console.log(`  - BEYOND_PRESENCE_AVATAR_ID: ${process.env.BEYOND_PRESENCE_AVATAR_ID ? '✓' : '✗'}`);
 
-// Define the agent using LiveKit SDK pattern
-const agent = defineAgent({
+// Define the agent using LiveKit SDK pattern (matching Beyond Presence example)
+export default defineAgent({
     entry: async (ctx) => {
         console.log(`[Bridge] 🎬 Agent joining room: ${ctx.room.name}`);
         
@@ -53,9 +54,8 @@ const agent = defineAgent({
     },
 });
 
-console.log('[Bridge] 🚀 Agent defined, starting worker...');
-
-// Start the worker to listen for room assignments
-cli.runApp(new WorkerOptions({ agent }));
-
-console.log('[Bridge] 🎧 Worker running and listening for rooms');
+// Start the worker if this file is run directly (matching Beyond Presence example pattern)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    console.log('[Bridge] 🚀 Starting worker...');
+    cli.runApp(new WorkerOptions({ agent: import.meta.filename }));
+}
