@@ -5,7 +5,7 @@ import 'dotenv/config';
 const app = express();
 app.use(express.json());
 
-const LIVEKIT_URL = (process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || '').replace('wss://', 'https://');
+const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL;
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const BEYOND_PRESENCE_API_KEY = process.env.BEYOND_PRESENCE_API_KEY;
