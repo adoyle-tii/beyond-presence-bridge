@@ -181,22 +181,22 @@ function generateAvatarToken(roomName, identity, apiKey, apiSecret) {
         throw new Error('Missing LIVEKIT_API_KEY or LIVEKIT_API_SECRET');
     }
     
-    const token = new AccessToken(apiKey, apiSecret, {
+    const at = new AccessToken(apiKey, apiSecret, {
         identity: identity,
-        ttl: '2h'
     });
     
-    token.addGrant({
+    at.addGrant({
         room: roomName,
         roomJoin: true,
         canPublish: true,
         canSubscribe: true,
         canPublishData: true,
-        hidden: false
     });
     
-    const jwt = token.toJwt();
-    console.log(`[Bridge] Generated JWT token (length: ${jwt.length})`);
+    const jwt = at.toJwt();
+    console.log(`[Bridge] Generated JWT token: ${jwt ? 'SUCCESS' : 'FAILED'}`);
+    console.log(`[Bridge] Token length: ${jwt ? jwt.length : 0}`);
+    console.log(`[Bridge] Token preview: ${jwt ? jwt.substring(0, 50) + '...' : 'null'}`);
     
     return jwt;
 }
