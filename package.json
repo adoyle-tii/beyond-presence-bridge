@@ -1,15 +1,15 @@
 {
-  "name": "livekit-coaching-agent",
+  "name": "avatar-bridge",
   "version": "1.0.0",
-  "description": "LiveKit agent for coaching sessions with Beyond Presence avatar",
+  "description": "Simple HTTP bridge for Beyond Presence avatar",
   "type": "module",
-  "main": "agent.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node agent.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "@livekit/agents": "latest",
-    "@livekit/agents-plugin-bey": "latest",
+    "livekit-server-sdk": "^2.8.1",
+    "express": "^4.21.2",
     "dotenv": "^16.4.5"
   },
   "engines": {
