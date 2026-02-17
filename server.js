@@ -1,5 +1,5 @@
 import express from 'express';
-import { AccessToken } from 'livekit-server-sdk';
+import jwt from 'jsonwebtoken';
 import WebSocket from 'ws';
 
 const app = express();
@@ -172,7 +172,7 @@ async function monitorAvatarSession(roomName, sessionId, apiKey) {
     }, 5000);
 }
 
-// Generate LiveKit token for avatar
+// Generate LiveKit token for avatar (using manual JWT signing like the Worker)
 function generateAvatarToken(roomName, identity, apiKey, apiSecret) {
     console.log(`[Bridge] Generating token for identity: ${identity}`);
     console.log(`[Bridge] API Key present: ${!!apiKey}, API Secret present: ${!!apiSecret}`);
@@ -181,24 +181,29 @@ function generateAvatarToken(roomName, identity, apiKey, apiSecret) {
         throw new Error('Missing LIVEKIT_API_KEY or LIVEKIT_API_SECRET');
     }
     
-    const at = new AccessToken(apiKey, apiSecret, {
-        identity: identity,
-    });
+    const now = Math.floor(Date.now() / 1000);
     
-    at.addGrant({
-        room: roomName,
-        roomJoin: true,
-        canPublish: true,
-        canSubscribe: true,
-        canPublishData: true,
-    });
+    const payload = {
+        sub: identity,              // Subject (participant identity)
+        iss: apiKey,                // Issuer (API Key) - REQUIRED
+        nbf: now,                   // Not before
+        exp: now + 7200,            // Expires in 2 hours
+        video: {                    // Video grants
+            room: roomName,
+            roomJoin: true,
+            canPublish: true,
+            canSubscribe: true,
+            canPublishData: true,
+        }
+    };
     
-    const jwt = at.toJwt();
-    console.log(`[Bridge] Generated JWT token: ${jwt ? 'SUCCESS' : 'FAILED'}`);
-    console.log(`[Bridge] Token length: ${jwt ? jwt.length : 0}`);
-    console.log(`[Bridge] Token preview: ${jwt ? jwt.substring(0, 50) + '...' : 'null'}`);
+    const token = jwt.sign(payload, apiSecret, { algorithm: 'HS256' });
     
-    return jwt;
+    console.log(`[Bridge] Generated JWT token: ${token ? 'SUCCESS' : 'FAILED'}`);
+    console.log(`[Bridge] Token length: ${token ? token.length : 0}`);
+    console.log(`[Bridge] Token preview: ${token ? token.substring(0, 50) + '...' : 'null'}`);
+    
+    return token;
 }
 
 // Start HTTP server
