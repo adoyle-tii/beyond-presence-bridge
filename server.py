@@ -24,13 +24,25 @@ def start_bot():
     logger.info(f"🎬 Starting bot for room: {room_name}")
     
     try:
-        # Start bot as subprocess
+        # Start bot as subprocess with output streaming
+        import threading
+        
+        def stream_output(pipe, prefix):
+            """Stream subprocess output to logger"""
+            for line in iter(pipe.readline, b''):
+                logger.info(f"{prefix} {line.decode().strip()}")
+            pipe.close()
+        
         process = subprocess.Popen(
             ['python', 'bot.py', room_name],
             env=os.environ.copy(),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
+        
+        # Start threads to stream output
+        threading.Thread(target=stream_output, args=(process.stdout, f"[Bot {room_name}]"), daemon=True).start()
+        threading.Thread(target=stream_output, args=(process.stderr, f"[Bot {room_name}]"), daemon=True).start()
         
         active_bots[room_name] = {
             'process': process,
