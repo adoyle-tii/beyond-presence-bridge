@@ -19,10 +19,10 @@ app.get('/health', (req, res) => {
 
 // Start avatar session endpoint (called by Cloudflare Worker)
 app.post('/start-avatar', async (req, res) => {
-    const { roomName, avatarId, sessionId, sellerIdentity } = req.body;
+    const { roomName, avatarId, sessionId, coachAudioParticipant } = req.body;
     
     console.log(`[Bridge] Starting avatar for room: ${roomName}`);
-    console.log(`[Bridge] Seller identity: ${sellerIdentity}`);
+    console.log(`[Bridge] Coach audio published by: ${coachAudioParticipant}`);
     
     if (!roomName || !avatarId) {
         return res.status(400).json({ error: 'Missing roomName or avatarId' });
@@ -37,7 +37,7 @@ app.post('/start-avatar', async (req, res) => {
     activeSessions.set(roomName, {
         avatarId,
         sessionId,
-        sellerIdentity,
+        coachAudioParticipant,
         status: 'starting',
         startedAt: new Date().toISOString()
     });
@@ -50,7 +50,7 @@ app.post('/start-avatar', async (req, res) => {
     });
     
     // Start avatar connection asynchronously
-    startAvatarForRoom(roomName, avatarId, sessionId, sellerIdentity).catch(err => {
+    startAvatarForRoom(roomName, avatarId, sessionId, coachAudioParticipant).catch(err => {
         console.error(`[Bridge] Failed to start avatar for ${roomName}:`, err);
         activeSessions.delete(roomName);
     });
@@ -78,9 +78,9 @@ app.post('/stop-avatar', async (req, res) => {
 });
 
 // Start Beyond Presence avatar for a specific room
-async function startAvatarForRoom(roomName, avatarId, sessionId, sellerIdentity) {
+async function startAvatarForRoom(roomName, avatarId, sessionId, coachAudioParticipant) {
     console.log(`[Bridge] Starting Beyond Presence avatar for room: ${roomName}`);
-    console.log(`[Bridge] Will sync avatar with audio from: ${sellerIdentity || 'any participant'}`);
+    console.log(`[Bridge] Will sync avatar with coach-voice track from: ${coachAudioParticipant}`);
     
     const wsUrl = process.env.LIVEKIT_WS_URL;
     const apiKey = process.env.LIVEKIT_API_KEY;
@@ -102,10 +102,12 @@ async function startAvatarForRoom(roomName, avatarId, sessionId, sellerIdentity)
     console.log(`  - Avatar ID: ${avatarId}`);
     console.log(`  - Room: ${roomName}`);
     console.log(`  - LiveKit URL: ${cleanWsUrl}`);
-    console.log(`  - Audio source: ${sellerIdentity || 'auto-detect'}`);
+    console.log(`  - Audio source participant: ${coachAudioParticipant}`);
+    console.log(`  - Audio source track: coach-voice`);
     
     try {
         // Call Beyond Presence REST API to start avatar session
+        // The avatar will sync with the "coach-voice" track published by coachAudioParticipant
         const response = await fetch('https://api.bey.dev/v1/sessions', {
             method: 'POST',
             headers: {
@@ -120,7 +122,8 @@ async function startAvatarForRoom(roomName, avatarId, sessionId, sellerIdentity)
                 auto_start: true,
                 session_config: {
                     enable_audio_sync: true,
-                    audio_source_participant_identity: sellerIdentity || null,
+                    audio_source_participant_identity: coachAudioParticipant,
+                    audio_track_name: 'coach-voice', // Specify the exact track to sync with
                     video_quality: 'high'
                 }
             })
