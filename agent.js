@@ -24,12 +24,18 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`[Bridge] 🚀 HTTP server running on port ${PORT}`);
     console.log(`[Bridge] Environment check:`);
-    console.log(`  - LIVEKIT_URL: ${process.env.LIVEKIT_URL ? '✓' : '✗'}`);
+    console.log(`  - LIVEKIT_WS_URL: ${process.env.LIVEKIT_WS_URL ? '✓' : '✗'}`);
     console.log(`  - LIVEKIT_API_KEY: ${process.env.LIVEKIT_API_KEY ? '✓' : '✗'}`);
     console.log(`  - LIVEKIT_API_SECRET: ${process.env.LIVEKIT_API_SECRET ? '✓' : '✗'}`);
     console.log(`  - BEYOND_PRESENCE_API_KEY: ${process.env.BEYOND_PRESENCE_API_KEY ? '✓' : '✗'}`);
     console.log(`  - BEYOND_PRESENCE_AVATAR_ID: ${process.env.BEYOND_PRESENCE_AVATAR_ID ? '✓' : '✗'}`);
 });
+
+// Set LIVEKIT_URL from LIVEKIT_WS_URL if needed (for SDK compatibility)
+if (process.env.LIVEKIT_WS_URL && !process.env.LIVEKIT_URL) {
+    process.env.LIVEKIT_URL = process.env.LIVEKIT_WS_URL;
+    console.log('[Bridge] Using LIVEKIT_WS_URL as LIVEKIT_URL for SDK compatibility');
+}
 
 // Define the LiveKit agent
 export default defineAgent({
