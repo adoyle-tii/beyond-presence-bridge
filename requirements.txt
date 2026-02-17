@@ -1,6 +1,7 @@
-pipecat-ai[livekit]>=0.0.40
+pipecat-ai[livekit,websocket]>=0.0.40
 pipecat-ai-bey>=0.0.4
 python-dotenv>=1.0.0
 loguru>=0.7.0
 aiohttp>=3.9.0
 flask>=3.0.0
+websockets>=12.0
