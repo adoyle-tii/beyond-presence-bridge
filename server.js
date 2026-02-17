@@ -122,7 +122,8 @@ async function startAvatarForRoom(roomName, avatarId, sessionId, coachAudioParti
                 auto_start: true,
                 session_config: {
                     enable_audio_sync: true,
-                    audio_source_participant_identity: coachAudioParticipant,
+                    // Let Beyond Presence auto-detect the audio source
+                    // It should find the 'coach-voice' track published by seller-Max Carter
                     video_quality: 'high'
                 }
             })
