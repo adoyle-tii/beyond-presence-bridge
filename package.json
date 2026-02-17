@@ -9,8 +9,8 @@
     "dev": "node --watch agent.js"
   },
   "dependencies": {
-    "@livekit/agents": "^0.8.0",
-    "@livekit/agents-plugin-bey": "latest",
+    "@livekit/agents": "^1.0.44",
+    "@livekit/agents-plugin-bey": "^1.0.44",
     "livekit-client": "^2.5.0",
     "express": "^4.21.2",
     "dotenv": "^16.4.5"
