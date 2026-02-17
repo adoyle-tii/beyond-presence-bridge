@@ -59,6 +59,8 @@ app.post('/start-avatar', async (req, res) => {
             url: LIVEKIT_URL,
             token: token,
             auto_start: true,  // Auto-start the session
+            audio_source_participant_identity: coachAudioParticipant,  // Who publishes the audio
+            audio_source_track_name: 'coach-voice',  // Which track to sync with
         };
         
         console.log('[Bridge] Payload keys:', Object.keys(payload));
