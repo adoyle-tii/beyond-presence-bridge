@@ -4,33 +4,12 @@ import sys
 from loguru import logger
 from dotenv import load_dotenv
 
-# DEBUG: Try importing from the discovered transport module
-try:
-    print("=" * 60)
-    print("DEBUG: Trying pipecat_bey.transport import")
-    print("=" * 60)
-    import pipecat_bey.transport as bey_transport
-    print(f"✅ pipecat_bey.transport imported successfully")
-    print(f"Available in transport module:")
-    for attr in dir(bey_transport):
-        if not attr.startswith('_'):
-            obj = getattr(bey_transport, attr)
-            print(f"  - {attr}: {type(obj).__name__}")
-    print("=" * 60)
-    sys.exit(0)
-except Exception as e:
-    print(f"DEBUG ERROR: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
-from pipecat_bey.services import BeyService
-from pipecat.transports.services.livekit import LiveKitTransport, LiveKitParams
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat_bey.transport import BeyTransport, BeyParams
+from pipecat.frames.frames import TextFrame, EndFrame
 
 load_dotenv()
 
@@ -39,76 +18,80 @@ logger.add(sys.stderr, level="DEBUG")
 
 async def main():
     """
-    Pipecat bot that connects ElevenLabs → Beyond Presence for coaching sessions
+    Pipecat bot that uses Beyond Presence transport for coaching sessions with avatar
     """
     
-    # Get room name from command line or env
+    # Get parameters from environment
     room_name = sys.argv[1] if len(sys.argv) > 1 else os.getenv("LIVEKIT_ROOM")
+    avatar_id = os.getenv("BEYOND_PRESENCE_AVATAR_ID")
+    bey_api_key = os.getenv("BEYOND_PRESENCE_API_KEY")
+    livekit_url = os.getenv("LIVEKIT_WS_URL") or os.getenv("LIVEKIT_URL")
+    livekit_api_key = os.getenv("LIVEKIT_API_KEY")
+    livekit_api_secret = os.getenv("LIVEKIT_API_SECRET")
     
-    if not room_name:
-        logger.error("No room name provided. Usage: python bot.py <room_name>")
+    if not all([room_name, avatar_id, bey_api_key, livekit_url, livekit_api_key, livekit_api_secret]):
+        logger.error("Missing required environment variables")
+        logger.error(f"LIVEKIT_ROOM: {bool(room_name)}")
+        logger.error(f"BEYOND_PRESENCE_AVATAR_ID: {bool(avatar_id)}")
+        logger.error(f"BEYOND_PRESENCE_API_KEY: {bool(bey_api_key)}")
+        logger.error(f"LIVEKIT_URL/LIVEKIT_WS_URL: {bool(livekit_url)}")
+        logger.error(f"LIVEKIT_API_KEY: {bool(livekit_api_key)}")
+        logger.error(f"LIVEKIT_API_SECRET: {bool(livekit_api_secret)}")
         sys.exit(1)
     
-    logger.info(f"🎬 Starting Pipecat bot for room: {room_name}")
+    logger.info(f"🎬 Starting Pipecat bot with Beyond Presence avatar")
+    logger.info(f"   Room: {room_name}")
+    logger.info(f"   Avatar ID: {avatar_id}")
     
-    # LiveKit transport configuration
-    transport = LiveKitTransport(
-        LiveKitParams(
+    # Beyond Presence transport configuration
+    transport = BeyTransport(
+        BeyParams(
+            api_key=bey_api_key,
+            avatar_id=avatar_id,
+            livekit_url=livekit_url,
+            livekit_api_key=livekit_api_key,
+            livekit_api_secret=livekit_api_secret,
+            room_name=room_name,
             audio_in_enabled=True,
             audio_out_enabled=True,
             video_out_enabled=True,
-            vad_enabled=True,
-            vad_analyzer=None,  # Use LiveKit's built-in VAD
-            api_key=os.getenv("LIVEKIT_API_KEY"),
-            api_secret=os.getenv("LIVEKIT_API_SECRET"),
-            url=os.getenv("LIVEKIT_WS_URL"),
-            room=room_name,
         )
     )
     
     # ElevenLabs TTS service
     tts = ElevenLabsTTSService(
         api_key=os.getenv("ELEVENLABS_API_KEY"),
-        voice_id=os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"),  # Default voice
+        voice_id=os.getenv("ELEVENLABS_VOICE_ID", "EXAVITQu4vr4xnSDxMaL"),
     )
     
-    # Beyond Presence avatar service
-    avatar = BeyService(
-        api_key=os.getenv("BEYOND_PRESENCE_API_KEY"),
-        avatar_id=os.getenv("BEYOND_PRESENCE_AVATAR_ID"),
-    )
-    
-    # Build pipeline: TTS → Avatar
+    # Build pipeline: TTS → Transport
     pipeline = Pipeline([
         tts,
-        avatar,
         transport.output(),
     ])
     
     # Create task
-    task = PipelineTask(
-        pipeline,
-        params=PipelineParams(
-            allow_interruptions=True,
-            enable_metrics=True,
-        )
-    )
+    task = PipelineTask(pipeline)
     
     # Run the bot
     runner = PipelineRunner()
     
     @transport.event_handler("on_first_participant_joined")
     async def on_first_participant_joined(transport, participant):
-        logger.info(f"🎤 Participant joined: {participant}")
-        await task.queue_frames([LLMMessagesFrame([
-            {
-                "role": "system",
-                "content": "You are a sales coach. Start by greeting the seller."
-            }
-        ])])
+        logger.info(f"🎤 Participant joined: {participant.get('identity', 'unknown')}")
+        # Send initial greeting
+        await task.queue_frames([
+            TextFrame("Hi! I've reviewed your recent assessment. What would you like to focus on in today's coaching session?")
+        ])
+    
+    @transport.event_handler("on_participant_left")
+    async def on_participant_left(transport, participant):
+        logger.info(f"👋 Participant left: {participant.get('identity', 'unknown')}")
+        await task.queue_frames([EndFrame()])
     
     logger.info("🚀 Starting pipeline runner...")
     await runner.run(task)
+    logger.info("✅ Pipeline completed")
 
 if __name__ == "__main__":
     asyncio.run(main())
