@@ -8,7 +8,7 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
-from pipecat_bey import BeyService
+from pipecat_bey.services import BeyService
 from pipecat.transports.services.livekit import LiveKitTransport, LiveKitParams
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 
