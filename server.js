@@ -44,6 +44,7 @@ app.post('/start-avatar', async (req, res) => {
                 livekit_room: roomName,
                 url: LIVEKIT_URL,
                 token: token,
+                auto_start: true,
             }),
         });
         
