@@ -57,5 +57,5 @@ export default defineAgent({
 // Start the worker if this file is run directly (matching Beyond Presence example pattern)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log('[Bridge] 🚀 Starting worker...');
-    cli.runApp(new WorkerOptions({ agent: import.meta.filename }));
+    cli.runApp(new WorkerOptions({ agent: fileURLToPath(import.meta.url) }));
 }
