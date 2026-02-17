@@ -4,48 +4,18 @@ import sys
 from loguru import logger
 from dotenv import load_dotenv
 
-# DEBUG: Discover what's in pipecat_bey
+# DEBUG: Try importing from the discovered transport module
 try:
-    import pipecat_bey
     print("=" * 60)
-    print("DEBUG: pipecat_bey package inspection")
+    print("DEBUG: Trying pipecat_bey.transport import")
     print("=" * 60)
-    print(f"Location: {pipecat_bey.__file__}")
-    print(f"Package: {pipecat_bey.__package__}")
-    print(f"Path: {pipecat_bey.__path__ if hasattr(pipecat_bey, '__path__') else 'N/A'}")
-    
-    # Try to list all modules in the package
-    import pkgutil
-    print(f"\nSubmodules:")
-    if hasattr(pipecat_bey, '__path__'):
-        for importer, modname, ispkg in pkgutil.iter_modules(pipecat_bey.__path__, prefix='pipecat_bey.'):
-            print(f"  - {modname} (package: {ispkg})")
-    
-    print(f"\nAttributes:")
-    for attr in dir(pipecat_bey):
+    import pipecat_bey.transport as bey_transport
+    print(f"✅ pipecat_bey.transport imported successfully")
+    print(f"Available in transport module:")
+    for attr in dir(bey_transport):
         if not attr.startswith('_'):
-            print(f"  - {attr}")
-    
-    # Try common import patterns
-    print(f"\nTrying common import patterns:")
-    try:
-        from pipecat_bey import BeyService
-        print(f"  ✅ from pipecat_bey import BeyService")
-    except Exception as e:
-        print(f"  ❌ from pipecat_bey import BeyService: {e}")
-    
-    try:
-        from pipecat_bey.bey import BeyService
-        print(f"  ✅ from pipecat_bey.bey import BeyService")
-    except Exception as e:
-        print(f"  ❌ from pipecat_bey.bey import BeyService: {e}")
-    
-    try:
-        from pipecat_bey.service import BeyService
-        print(f"  ✅ from pipecat_bey.service import BeyService")
-    except Exception as e:
-        print(f"  ❌ from pipecat_bey.service import BeyService: {e}")
-        
+            obj = getattr(bey_transport, attr)
+            print(f"  - {attr}: {type(obj).__name__}")
     print("=" * 60)
     sys.exit(0)
 except Exception as e:
