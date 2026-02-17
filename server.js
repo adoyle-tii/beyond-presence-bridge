@@ -123,7 +123,6 @@ async function startAvatarForRoom(roomName, avatarId, sessionId, coachAudioParti
                 session_config: {
                     enable_audio_sync: true,
                     audio_source_participant_identity: coachAudioParticipant,
-                    audio_track_name: 'coach-voice', // Specify the exact track to sync with
                     video_quality: 'high'
                 }
             })
@@ -138,6 +137,7 @@ async function startAvatarForRoom(roomName, avatarId, sessionId, coachAudioParti
         const avatarSession = await response.json();
         console.log(`[Bridge] ✅ Beyond Presence avatar session created:`, avatarSession.id);
         console.log(`[Bridge] Avatar status:`, avatarSession.status);
+        console.log(`[Bridge] Full avatar session response:`, JSON.stringify(avatarSession, null, 2));
         
         // Update session
         const session = activeSessions.get(roomName);
