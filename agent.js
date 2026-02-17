@@ -17,45 +17,40 @@ console.log(`  - LIVEKIT_API_SECRET: ${process.env.LIVEKIT_API_SECRET ? '✓' : 
 console.log(`  - BEYOND_PRESENCE_API_KEY: ${process.env.BEYOND_PRESENCE_API_KEY ? '✓' : '✗'}`);
 console.log(`  - BEYOND_PRESENCE_AVATAR_ID: ${process.env.BEYOND_PRESENCE_AVATAR_ID ? '✓' : '✗'}`);
 
-// Define the agent entry point
-async function entrypoint(ctx) {
-    console.log(`[Bridge] 🎬 Agent joining room: ${ctx.room.name}`);
-    
-    await ctx.connect();
-    console.log(`[Bridge] ✅ Agent connected to room`);
-    
-    const avatarId = process.env.BEYOND_PRESENCE_AVATAR_ID;
-    
-    if (!avatarId) {
-        console.error('[Bridge] ❌ BEYOND_PRESENCE_AVATAR_ID not set!');
-        return;
-    }
-    
-    console.log(`[Bridge] 🎭 Starting Beyond Presence avatar: ${avatarId}`);
-    
-    try {
-        // Create Beyond Presence avatar using the plugin
-        const avatar = new bey.Avatar({
-            avatarId: avatarId,
-        });
+// Define the agent using LiveKit SDK pattern
+export default defineAgent({
+    entry: async (ctx) => {
+        console.log(`[Bridge] 🎬 Agent joining room: ${ctx.room.name}`);
         
-        // Start the avatar - it will automatically detect and sync with audio in the room
-        await avatar.start(ctx);
+        await ctx.connect();
+        console.log(`[Bridge] ✅ Agent connected to room`);
         
-        console.log(`[Bridge] ✅ Beyond Presence avatar started successfully!`);
-        console.log(`[Bridge] 🎤 Avatar will automatically sync with room audio`);
+        const avatarId = process.env.BEYOND_PRESENCE_AVATAR_ID;
         
-    } catch (error) {
-        console.error('[Bridge] ❌ Failed to start Beyond Presence avatar:', error);
-        throw error;
-    }
-}
+        if (!avatarId) {
+            console.error('[Bridge] ❌ BEYOND_PRESENCE_AVATAR_ID not set!');
+            return;
+        }
+        
+        console.log(`[Bridge] 🎭 Starting Beyond Presence avatar: ${avatarId}`);
+        
+        try {
+            // Create Beyond Presence avatar using the plugin
+            const avatar = new bey.Avatar({
+                avatarId: avatarId,
+            });
+            
+            // Start the avatar - it will automatically detect and sync with audio in the room
+            await avatar.start(ctx);
+            
+            console.log(`[Bridge] ✅ Beyond Presence avatar started successfully!`);
+            console.log(`[Bridge] 🎤 Avatar will automatically sync with room audio`);
+            
+        } catch (error) {
+            console.error('[Bridge] ❌ Failed to start Beyond Presence avatar:', error);
+            throw error;
+        }
+    },
+});
 
-// Start the LiveKit agent worker
-cli.runApp(
-    new WorkerOptions({
-        entrypoint,
-    })
-);
-
-console.log('[Bridge] 🚀 Agent worker initialized and ready');
+console.log('[Bridge] 🚀 Agent defined and ready');
