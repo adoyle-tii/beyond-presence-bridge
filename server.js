@@ -60,11 +60,6 @@ app.post('/start-avatar', async (req, res) => {
                 livekit_room: roomName,
                 url: LIVEKIT_URL,
                 token: token,
-                session_config: {
-                    enable_audio_sync: true,
-                    audio_source_participant_identity: coachAudioParticipant,
-                    audio_source_track_name: 'coach-voice',
-                },
             }),
         });
         
