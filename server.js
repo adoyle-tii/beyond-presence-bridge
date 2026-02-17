@@ -1,6 +1,6 @@
 import express from 'express';
-import { Room, RoomEvent, Track } from 'livekit-client';
 import { AccessToken } from 'livekit-server-sdk';
+import WebSocket from 'ws';
 
 const app = express();
 app.use(express.json());
@@ -47,9 +47,9 @@ app.post('/start-avatar', async (req, res) => {
         sessionId
     });
     
-    // Start agent connection asynchronously
-    startAgentForRoom(roomName, avatarId, sessionId).catch(err => {
-        console.error(`[Bridge] Failed to start agent for ${roomName}:`, err);
+    // Start avatar connection asynchronously
+    startAvatarForRoom(roomName, avatarId, sessionId).catch(err => {
+        console.error(`[Bridge] Failed to start avatar for ${roomName}:`, err);
         activeSessions.delete(roomName);
     });
 });
@@ -70,18 +70,14 @@ app.post('/stop-avatar', async (req, res) => {
     console.log(`[Bridge] Stopping avatar for room: ${roomName}`);
     
     // Clean up session
-    if (session.room) {
-        await session.room.disconnect();
-    }
-    
     activeSessions.delete(roomName);
     
     res.json({ status: 'stopped', roomName });
 });
 
-// Start LiveKit agent for a specific room
-async function startAgentForRoom(roomName, avatarId, sessionId) {
-    console.log(`[Bridge] Connecting agent to room: ${roomName}`);
+// Start Beyond Presence avatar for a specific room
+async function startAvatarForRoom(roomName, avatarId, sessionId) {
+    console.log(`[Bridge] Starting Beyond Presence avatar for room: ${roomName}`);
     
     const wsUrl = process.env.LIVEKIT_WS_URL;
     const apiKey = process.env.LIVEKIT_API_KEY;
@@ -92,124 +88,92 @@ async function startAgentForRoom(roomName, avatarId, sessionId) {
         throw new Error('Missing required environment variables');
     }
     
-    // Generate token for agent participant
-    const agentIdentity = `bridge-agent-${sessionId}`;
-    const token = generateAgentToken(roomName, agentIdentity, apiKey, apiSecret);
+    // Generate token for avatar participant
+    const avatarIdentity = `avatar-${avatarId}`;
+    const avatarToken = generateAvatarToken(roomName, avatarIdentity, apiKey, apiSecret);
     
-    // Create LiveKit room connection
-    const room = new Room();
+    // Clean WebSocket URL (remove any query params)
+    const cleanWsUrl = wsUrl.split('?')[0];
+    
+    console.log(`[Bridge] Creating Beyond Presence session with:`);
+    console.log(`  - Avatar ID: ${avatarId}`);
+    console.log(`  - Room: ${roomName}`);
+    console.log(`  - LiveKit URL: ${cleanWsUrl}`);
     
     try {
-        // Connect to room
-        await room.connect(wsUrl, token);
-        console.log(`[Bridge] Agent connected to room: ${roomName}`);
+        // Call Beyond Presence REST API to start avatar session
+        const response = await fetch('https://api.bey.dev/v1/sessions', {
+            method: 'POST',
+            headers: {
+                'x-api-key': beyondPresenceApiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                avatar_id: avatarId,
+                url: cleanWsUrl,
+                token: avatarToken,
+                livekit_room: roomName,
+                auto_start: true,
+                session_config: {
+                    enable_audio_sync: true,
+                    audio_source_participant_identity: null, // Will sync with any audio in the room
+                    video_quality: 'high'
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[Bridge] Beyond Presence API error (${response.status}):`, errorText);
+            throw new Error(`Beyond Presence API error (${response.status}): ${errorText}`);
+        }
+        
+        const avatarSession = await response.json();
+        console.log(`[Bridge] ✅ Beyond Presence avatar session created:`, avatarSession.id);
+        console.log(`[Bridge] Avatar status:`, avatarSession.status);
         
         // Update session
         const session = activeSessions.get(roomName);
         if (session) {
-            session.room = room;
-            session.status = 'connected';
+            session.avatarSession = avatarSession;
+            session.status = 'avatar_active';
         }
         
-        // Subscribe to coach audio track from browser client
-        room.on(RoomEvent.TrackSubscribed, async (track, publication, participant) => {
-            console.log(`[Bridge] Track subscribed: ${track.kind} from ${participant.identity}`);
-            
-            // Look for coach audio from the seller client
-            if (track.kind === Track.Kind.Audio && 
-                publication.name === 'coach-voice' && 
-                participant.identity.startsWith('seller-')) {
-                
-                console.log(`[Bridge] Found coach audio track, starting Beyond Presence avatar`);
-                
-                try {
-                    // Call Beyond Presence REST API to start avatar session
-                    const avatarSession = await startBeyondPresenceAvatar(
-                        roomName,
-                        avatarId,
-                        wsUrl,
-                        apiKey,
-                        apiSecret,
-                        beyondPresenceApiKey
-                    );
-                    
-                    console.log(`[Bridge] Beyond Presence avatar started:`, avatarSession.id);
-                    
-                    if (session) {
-                        session.avatarSession = avatarSession;
-                        session.status = 'avatar_active';
-                    }
-                    
-                } catch (error) {
-                    console.error(`[Bridge] Failed to start Beyond Presence avatar:`, error);
-                }
-            }
-        });
+        // Monitor avatar session (optional: poll for status updates)
+        monitorAvatarSession(roomName, avatarSession.id, beyondPresenceApiKey);
         
-        // Handle disconnection
-        room.on(RoomEvent.Disconnected, () => {
-            console.log(`[Bridge] Room disconnected: ${roomName}`);
-            activeSessions.delete(roomName);
-        });
-        
-        // Handle participant disconnect (clean up if seller leaves)
-        room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-            if (participant.identity.startsWith('seller-')) {
-                console.log(`[Bridge] Seller left, cleaning up room: ${roomName}`);
-                room.disconnect();
-                activeSessions.delete(roomName);
-            }
-        });
+        return avatarSession;
         
     } catch (error) {
-        console.error(`[Bridge] Failed to connect to LiveKit room:`, error);
+        console.error(`[Bridge] Failed to start Beyond Presence avatar:`, error);
         activeSessions.delete(roomName);
         throw error;
     }
 }
 
-// Start Beyond Presence avatar using REST API
-async function startBeyondPresenceAvatar(roomName, avatarId, livekitWsUrl, livekitApiKey, livekitApiSecret, beyondPresenceApiKey) {
-    // Generate token for avatar
-    const avatarIdentity = `avatar-${avatarId}`;
-    const avatarToken = generateAgentToken(roomName, avatarIdentity, livekitApiKey, livekitApiSecret);
-    
-    // Clean WebSocket URL
-    const cleanWsUrl = livekitWsUrl.split('?')[0];
-    
-    console.log(`[Bridge] Creating Beyond Presence session for avatar: ${avatarId}`);
-    
-    const response = await fetch('https://api.bey.dev/v1/sessions', {
-        method: 'POST',
-        headers: {
-            'x-api-key': beyondPresenceApiKey,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            avatar_id: avatarId,
-            url: cleanWsUrl,
-            token: avatarToken,
-            livekit_room: roomName,
-            auto_start: true,
-            session_config: {
-                enable_audio_sync: true
+// Monitor avatar session status (optional)
+async function monitorAvatarSession(roomName, sessionId, apiKey) {
+    // Check status after 5 seconds
+    setTimeout(async () => {
+        try {
+            const response = await fetch(`https://api.bey.dev/v1/sessions/${sessionId}`, {
+                headers: {
+                    'x-api-key': apiKey
+                }
+            });
+            
+            if (response.ok) {
+                const status = await response.json();
+                console.log(`[Bridge] Avatar session ${sessionId} status:`, status.status);
             }
-        })
-    });
-    
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Beyond Presence API error (${response.status}): ${errorText}`);
-    }
-    
-    const sessionData = await response.json();
-    console.log(`[Bridge] Beyond Presence session created:`, sessionData.id);
-    
-    return sessionData;
+        } catch (error) {
+            console.error(`[Bridge] Failed to check avatar status:`, error.message);
+        }
+    }, 5000);
 }
 
-// Generate LiveKit token
-function generateAgentToken(roomName, identity, apiKey, apiSecret) {
+// Generate LiveKit token for avatar
+function generateAvatarToken(roomName, identity, apiKey, apiSecret) {
     const token = new AccessToken(apiKey, apiSecret, {
         identity: identity,
         ttl: '2h'
@@ -230,7 +194,7 @@ function generateAgentToken(roomName, identity, apiKey, apiSecret) {
 // Start HTTP server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`[Bridge] Server running on port ${PORT}`);
+    console.log(`[Bridge] 🚀 Server running on port ${PORT}`);
     console.log(`[Bridge] Environment check:`);
     console.log(`  - LIVEKIT_WS_URL: ${process.env.LIVEKIT_WS_URL ? '✓' : '✗'}`);
     console.log(`  - LIVEKIT_API_KEY: ${process.env.LIVEKIT_API_KEY ? '✓' : '✗'}`);
@@ -242,13 +206,8 @@ app.listen(PORT, () => {
 process.on('SIGTERM', async () => {
     console.log('[Bridge] Shutting down gracefully...');
     
-    // Disconnect all active sessions
-    for (const [roomName, session] of activeSessions.entries()) {
-        console.log(`[Bridge] Cleaning up room: ${roomName}`);
-        if (session.room) {
-            await session.room.disconnect();
-        }
-    }
+    // Clear all active sessions
+    activeSessions.clear();
     
     process.exit(0);
 });
