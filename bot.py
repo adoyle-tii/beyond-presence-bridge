@@ -4,6 +4,27 @@ import sys
 from loguru import logger
 from dotenv import load_dotenv
 
+# DEBUG: Discover what's in pipecat_bey
+try:
+    import pipecat_bey
+    print("=" * 60)
+    print("DEBUG: pipecat_bey package inspection")
+    print("=" * 60)
+    print(f"Location: {pipecat_bey.__file__}")
+    print(f"\nAvailable attributes:")
+    for attr in dir(pipecat_bey):
+        if not attr.startswith('_'):
+            print(f"  - {attr}")
+            obj = getattr(pipecat_bey, attr)
+            print(f"    Type: {type(obj)}")
+    print("=" * 60)
+    sys.exit(0)  # Exit after debugging
+except Exception as e:
+    print(f"DEBUG ERROR: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
