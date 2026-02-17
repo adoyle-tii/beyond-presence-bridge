@@ -58,6 +58,7 @@ app.post('/start-avatar', async (req, res) => {
             livekit_room: roomName,
             url: LIVEKIT_URL,
             token: token,
+            auto_start: true,  // Auto-start the session
         };
         
         console.log('[Bridge] Payload keys:', Object.keys(payload));
@@ -92,29 +93,11 @@ app.post('/start-avatar', async (req, res) => {
         console.log('[Bridge] ✅ Avatar session created:', beyondData.id);
         console.log('[Bridge] Status:', beyondData.status);
         
-        // If session is in 'to_start' state, start it explicitly
-        if (beyondData.status?.type === 'to_start') {
-            console.log('[Bridge] 🚀 Starting session explicitly...');
-            const startResponse = await fetch(`https://api.bey.dev/v1/sessions/${beyondData.id}/start`, {
-                method: 'POST',
-                headers: {
-                    'x-api-key': BEYOND_PRESENCE_API_KEY,
-                },
-            });
-            
-            if (startResponse.ok) {
-                console.log('[Bridge] ✅ Session started successfully!');
-            } else {
-                const startError = await startResponse.json();
-                console.error('[Bridge] ⚠️ Failed to start session:', startError);
-            }
-        }
-        
         res.json({ 
             success: true, 
             sessionId: beyondData.id,
             status: beyondData.status,
-            message: 'Avatar started successfully' 
+            message: 'Avatar session started' 
         });
         
     } catch (error) {
