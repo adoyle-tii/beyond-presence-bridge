@@ -11,14 +11,43 @@ try:
     print("DEBUG: pipecat_bey package inspection")
     print("=" * 60)
     print(f"Location: {pipecat_bey.__file__}")
-    print(f"\nAvailable attributes:")
+    print(f"Package: {pipecat_bey.__package__}")
+    print(f"Path: {pipecat_bey.__path__ if hasattr(pipecat_bey, '__path__') else 'N/A'}")
+    
+    # Try to list all modules in the package
+    import pkgutil
+    print(f"\nSubmodules:")
+    if hasattr(pipecat_bey, '__path__'):
+        for importer, modname, ispkg in pkgutil.iter_modules(pipecat_bey.__path__, prefix='pipecat_bey.'):
+            print(f"  - {modname} (package: {ispkg})")
+    
+    print(f"\nAttributes:")
     for attr in dir(pipecat_bey):
         if not attr.startswith('_'):
             print(f"  - {attr}")
-            obj = getattr(pipecat_bey, attr)
-            print(f"    Type: {type(obj)}")
+    
+    # Try common import patterns
+    print(f"\nTrying common import patterns:")
+    try:
+        from pipecat_bey import BeyService
+        print(f"  ✅ from pipecat_bey import BeyService")
+    except Exception as e:
+        print(f"  ❌ from pipecat_bey import BeyService: {e}")
+    
+    try:
+        from pipecat_bey.bey import BeyService
+        print(f"  ✅ from pipecat_bey.bey import BeyService")
+    except Exception as e:
+        print(f"  ❌ from pipecat_bey.bey import BeyService: {e}")
+    
+    try:
+        from pipecat_bey.service import BeyService
+        print(f"  ✅ from pipecat_bey.service import BeyService")
+    except Exception as e:
+        print(f"  ❌ from pipecat_bey.service import BeyService: {e}")
+        
     print("=" * 60)
-    sys.exit(0)  # Exit after debugging
+    sys.exit(0)
 except Exception as e:
     print(f"DEBUG ERROR: {e}")
     import traceback
