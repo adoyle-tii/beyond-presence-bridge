@@ -4,6 +4,40 @@ import sys
 from loguru import logger
 from dotenv import load_dotenv
 
+# DEBUG: Inspect BeyTransport signature
+import inspect
+from pipecat_bey.transport import BeyTransport, BeyParams
+
+print("=" * 60)
+print("BeyTransport signature:")
+print("=" * 60)
+sig = inspect.signature(BeyTransport.__init__)
+print(f"__init__{sig}")
+print()
+
+for param_name, param in sig.parameters.items():
+    if param_name != 'self':
+        print(f"  {param_name}:")
+        print(f"    - Type: {param.annotation if param.annotation != inspect.Parameter.empty else 'Any'}")
+        print(f"    - Default: {param.default if param.default != inspect.Parameter.empty else 'REQUIRED'}")
+
+print()
+print("=" * 60)
+print("BeyParams:")
+print("=" * 60)
+print(f"Type: {type(BeyParams)}")
+if hasattr(BeyParams, '__annotations__'):
+    print("Fields:")
+    for field, field_type in BeyParams.__annotations__.items():
+        print(f"  - {field}: {field_type}")
+if hasattr(BeyParams, 'model_fields'):
+    print("Pydantic fields:")
+    for field_name, field_info in BeyParams.model_fields.items():
+        print(f"  - {field_name}: {field_info}")
+
+print("=" * 60)
+sys.exit(0)
+
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineTask
