@@ -1,6 +1,5 @@
 import express from 'express';
-import { Room, RoomEvent, AccessToken } from 'livekit-server-sdk';
-import { Avatar } from '@livekit/agents-plugin-bey';
+import { AccessToken } from 'livekit-server-sdk';
 import 'dotenv/config';
 
 const app = express();
@@ -9,6 +8,7 @@ app.use(express.json());
 const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL;
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
+const BEYOND_PRESENCE_API_KEY = process.env.BEYOND_PRESENCE_API_KEY;
 const BEYOND_PRESENCE_AVATAR_ID = process.env.BEYOND_PRESENCE_AVATAR_ID;
 const PORT = process.env.PORT || 3000;
 
@@ -17,6 +17,7 @@ console.log('[Bridge] Environment check:');
 console.log(`  - LIVEKIT_URL: ${LIVEKIT_URL ? '✓' : '✗'}`);
 console.log(`  - LIVEKIT_API_KEY: ${LIVEKIT_API_KEY ? '✓' : '✗'}`);
 console.log(`  - LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET ? '✓' : '✗'}`);
+console.log(`  - BEYOND_PRESENCE_API_KEY: ${BEYOND_PRESENCE_API_KEY ? '✓' : '✗'}`);
 console.log(`  - BEYOND_PRESENCE_AVATAR_ID: ${BEYOND_PRESENCE_AVATAR_ID ? '✓' : '✗'}`);
 
 // Health check endpoint
@@ -33,11 +34,9 @@ app.post('/start-avatar', async (req, res) => {
     console.log('[Bridge] Coach audio participant:', coachAudioParticipant);
     
     try {
-        const room = new Room();
-        
-        // Generate token for the bridge agent
+        // Generate token for the avatar
         const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-            identity: `bridge-agent-${sessionId}`,
+            identity: `avatar-${avatarId || BEYOND_PRESENCE_AVATAR_ID}`,
         });
         at.addGrant({
             roomJoin: true,
@@ -49,37 +48,46 @@ app.post('/start-avatar', async (req, res) => {
         });
         const token = at.toJwt();
         
-        // Connect to room
-        await room.connect(LIVEKIT_URL, token);
-        console.log('[Bridge] ✅ Connected to room');
-        
-        // Wait for the coach-voice track
-        room.on(RoomEvent.TrackPublished, async (publication, participant) => {
-            console.log(`[Bridge] Track published: ${publication.trackName} by ${participant.identity}`);
-            
-            if (publication.trackName === 'coach-voice') {
-                console.log('[Bridge] 🎭 Coach voice detected, starting avatar...');
-                
-                try {
-                    const avatar = new Avatar({
-                        avatarId: avatarId || BEYOND_PRESENCE_AVATAR_ID,
-                    });
-                    
-                    // Start avatar synced to the coach-voice track
-                    await avatar.start({
-                        room,
-                        audioTrackName: 'coach-voice',
-                        audioParticipantIdentity: coachAudioParticipant,
-                    });
-                    
-                    console.log('[Bridge] ✅ Avatar started successfully!');
-                } catch (error) {
-                    console.error('[Bridge] ❌ Failed to start avatar:', error);
-                }
-            }
+        // Call Beyond Presence API to start the avatar session
+        const beyondResponse = await fetch('https://api.bey.dev/v1/sessions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${BEYOND_PRESENCE_API_KEY}`,
+            },
+            body: JSON.stringify({
+                avatar_id: avatarId || BEYOND_PRESENCE_AVATAR_ID,
+                livekit_room: roomName,
+                url: LIVEKIT_URL,
+                token: token,
+                session_config: {
+                    enable_audio_sync: true,
+                    audio_source_participant_identity: coachAudioParticipant,
+                    audio_source_track_name: 'coach-voice',
+                },
+            }),
         });
         
-        res.json({ success: true, message: 'Bridge agent connected, waiting for coach audio' });
+        const beyondData = await beyondResponse.json();
+        
+        if (!beyondResponse.ok) {
+            console.error('[Bridge] ❌ Beyond Presence API error:', beyondData);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Beyond Presence API error',
+                details: beyondData 
+            });
+        }
+        
+        console.log('[Bridge] ✅ Avatar session created:', beyondData.id);
+        console.log('[Bridge] Status:', beyondData.status);
+        
+        res.json({ 
+            success: true, 
+            sessionId: beyondData.id,
+            status: beyondData.status,
+            message: 'Avatar started successfully' 
+        });
         
     } catch (error) {
         console.error('[Bridge] ❌ Error:', error);
