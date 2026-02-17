@@ -47,10 +47,16 @@ app.post('/start-avatar', async (req, res) => {
             }),
         });
         
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[Avatar] API error:', response.status, errorText);
+            return res.status(500).json({ error: `Beyond Presence API error: ${response.status}`, details: errorText });
+        }
+        
         const data = await response.json();
         console.log('[Avatar] Session created:', data.id, 'Status:', data.status);
         
-        res.json({ success: true, sessionId: data.id });
+        res.json({ success: true, sessionId: data.id, status: data.status });
         
     } catch (error) {
         console.error('[Avatar] Error:', error);
